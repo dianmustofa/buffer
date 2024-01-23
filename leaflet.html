@@ -1,0 +1,517 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Eye Loca - Analisis Lokasi Bisnis</title>
+
+    <!--Leaflet Js-->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+      integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+      integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+      crossorigin=""
+    ></script>
+
+    <!--Bootstrap-->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!--Turf-->
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+    <!--Chart Js-->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!--data-->
+    <script src="apotek.js"></script>
+    <script src="halte.js"></script>
+    <script src="klinik.js"></script>
+    <script src="pemerintahan.js"></script>
+    <script src="pusatbelanja.js"></script>
+    <script src="puskesmas.js"></script>
+    <script src="rumahsakit.js"></script>
+    <script src="spbu.js"></script>
+    <script src="stasiunKA.js"></script>
+    <script src="supermarket.js"></script>
+    <script src="pddk.js"></script>
+    <!-- <script src="nepal-districts.js"></script> -->
+    <!-- <script src="nepal-districts-hq.js"></script> -->
+
+    <style>
+      /* body {
+            margin: 0;
+            padding: 0;
+        } */
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      #map {
+        /* width: 100%;
+            height: 100vh; */
+        flex: 70;
+        background-color: #e0e0e0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #container {
+        display: flex;
+        height: 100vh;
+        /* 100% tinggi viewport */
+      }
+
+      #myChart {
+        flex: 30;
+        /* 70% lebar container */
+        background-color: #f0f0f0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- <p id="demo"></p> -->
+    <div id="container">
+      <div id="map"></div>
+      <canvas id="myChart" width="400" height="400"></canvas>
+
+      <!-- Modal Login -->
+      <div
+        class="modal fade"
+        id="loginModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="exampleModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">Login</h5>
+              <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <form>
+                <div class="form-group">
+                  <label for="username">Nama Pengguna:</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="username"
+                    placeholder="Masukkan nama pengguna"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="password">Kata Sandi:</label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="password"
+                    placeholder="Masukkan kata sandi"
+                  />
+                </div>
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    class="form-check-input"
+                    id="rememberMe"
+                  />
+                  <label class="form-check-label" for="rememberMe"
+                    >Ingat Saya</label
+                  >
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <a href="#">Lupa Kata Sandi?</a>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal"
+              >
+                Tutup
+              </button>
+              <button type="button" class="btn btn-primary">Login</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+  <script>
+    var map_init = L.map("map", {
+      // center: [28.28623390197757, 84.28626251220703],
+      center: [-6.176968, 106.827426],
+      zoom: 12
+    });
+    var osm = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }
+    ).addTo(map_init);
+
+    // var sidebar = L.control.sidebar('sidebar', {
+    // 	position: 'left'
+    // });
+
+    // map_init.addControl(sidebar);
+
+    //Icon
+    var apotekIcon = L.icon({
+      iconUrl: "apotek.png",
+      iconSize: [32, 32], // set the size of the icon
+      iconAnchor: [16, 32], // set the anchor point of the icon
+      popupAnchor: [0, -32] // set the popup anchor to show above the marker
+    });
+    var halteIcon = L.icon({
+      iconUrl: "halte.png",
+      iconSize: [32, 32], // set the size of the icon
+      iconAnchor: [16, 32], // set the anchor point of the icon
+      popupAnchor: [0, -32] // set the popup anchor to show above the marker
+    });
+    var klinikIcon = L.icon({
+      iconUrl: "klinik.png",
+      iconSize: [32, 32], // set the size of the icon
+      iconAnchor: [16, 32], // set the anchor point of the icon
+      popupAnchor: [0, -32] // set the popup anchor to show above the marker
+    });
+    function getColor(population) {
+      // Implement your logic to assign colors based on population values
+      // For example, you can use a color scale or define specific thresholds
+      // This is a simple example; you may need to adjust it based on your data
+      return population > 50000
+        ? "red"
+        : population > 30000
+        ? "orange"
+        : population > 1000
+        ? "yellow"
+        : "green";
+    }
+
+    // Data JS
+    var apotek = L.geoJSON(apotekData, {
+      pointToLayer: function(feature, latlng) {
+        // Use the custom icon for each marker
+        return L.marker(latlng, { icon: apotekIcon });
+      },
+      onEachFeature: function(feature, layer) {
+        // apotekPoint = turf.point(feature.geometry.coordinates);
+        // console.log(apotekPoint);
+        // area = (turf.area(feature) / 1000000).toFixed(2);
+        // center_lat = turf.center(feature).geometry.coordinates[1];
+        // center_long = turf.center(feature).geometry.coordinates[0];
+
+        // bbox = turf.bbox(feature).toString();
+        district = feature.properties.NAMOBJ;
+
+        // layer.bindPopup(`<b>Luas : </b> ${area} <br><b>Koordinat X: </b> ${center_lat} <br><b>Koordinat Y: </b> ${center_long} <br><b>District: </b> ${district}`);
+        layer.bindPopup(` ${district}`);
+      }
+    });
+    var halte = L.geoJSON(halteData, {
+      pointToLayer: function(feature, latlng) {
+        // Use the custom icon for each marker
+        return L.marker(latlng, { icon: halteIcon });
+      }
+    });
+    var klinik = L.geoJSON(klinikData, {
+      pointToLayer: function(feature, latlng) {
+        // Use the custom icon for each marker
+        return L.marker(latlng, { icon: klinikIcon });
+      }
+    });
+    var pemerintahan = L.geoJSON(pemerintahanData);
+    var pusatbelanja = L.geoJSON(pusatbelanjaData);
+    var puskesmas = L.geoJSON(puskesmasData);
+    var rumahsakit = L.geoJSON(rumahsakitData);
+    var spbu = L.geoJSON(spbuData);
+    var stasiunKA = L.geoJSON(stasiunKAData);
+    var supermarket = L.geoJSON(supermarketData);
+    var penduduk = L.geoJSON(pddkData, {
+      style: function(feature) {
+        // Adjust the color based on the population value
+        var population = feature.properties.PENDUDUK_2; // replace 'population' with the actual property name
+        return {
+          fillColor: getColor(population), // implement the getColor function to return a color based on the population value
+          weight: 1,
+          opacity: 1,
+          color: "white",
+          fillOpacity: 0.8
+        };
+      },
+      onEachFeature: function(feature, layer) {
+        // nepalPolygon = turf.polygon(feature.geometry.coordinates);
+        // console.log(nepalPolygon);
+        // area = (turf.area(feature) / 1000000).toFixed(2);
+        // center_lat = turf.center(feature).geometry.coordinates[1];
+        // center_long = turf.center(feature).geometry.coordinates[0];
+        // bbox = turf.bbox(feature).toString();
+        // district = feature.properties.DISTRICT;
+        // layer.bindPopup(`<b>Luas : </b> ${area} <br><b>Koordinat X: </b> ${center_lat} <br><b>Koordinat Y: </b> ${center_long} <br><b>District: </b> ${district}`);
+      }
+    });
+    // var nepalHq = L.geoJSON(hqData);
+
+    // nepalDistrict.addTo(map_init);
+    // apotek{icon: greenIcon}.addTo(map_init);
+    // halte.addTo(map_init);
+    // klinik.addTo(map_init);
+    // pemerintahan.addTo(map_init);
+    // pusatbelanja.addTo(map_init);
+    // puskesmas.addTo(map_init);
+    // rumahsakit.addTo(map_init);
+    // spbu.addTo(map_init);
+    // stasiunKA.addTo(map_init);
+    // supermarket.addTo(map_init);
+    penduduk.addTo(map_init);
+    // End Data JS
+
+    // Create & add WMS-layer.
+    // var tasmania = L.tileLayer.wms('https://gis.dcktrp.id/geoserver/geonode/sistem_jaringan_pipa_deb5055acd62982b2be3c23a9d0eb550/ows').addTo(map_init);
+    // console.log(tasmania);
+
+    // Intersect
+    var poly1 = turf.polygon([
+      [
+        [-122.801742, 45.48565],
+        [-122.801742, 45.60491],
+        [-122.584762, 45.60491],
+        [-122.584762, 45.48565],
+        [-122.801742, 45.48565]
+      ]
+    ]);
+
+    var poly2 = turf.polygon([
+      [
+        [-122.520217, 45.535693],
+        [-122.64038, 45.553967],
+        [-122.720031, 45.526554],
+        [-122.669906, 45.507309],
+        [-122.723464, 45.446643],
+        [-122.532577, 45.408574],
+        [-122.487258, 45.477466],
+        [-122.520217, 45.535693]
+      ]
+    ]);
+
+    var intersection = turf.intersect(poly1, poly2);
+
+    var intesectGeojson = L.geoJSON(intersection).addTo(map_init);
+
+    // map_init.fitBounds(intesectGeojson.getBounds());
+
+    // End Intersect
+
+    var ctx = document.getElementById("myChart").getContext("2d");
+    var initialLabels = [];
+    var initialData = [];
+    var myChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: initialLabels,
+        datasets: [
+          {
+            label: "Grafik Jarak Apotek",
+            data: initialData,
+            backgroundColor: [
+              "rgba(255, 99, 132, 0.2)",
+              "rgba(54, 162, 235, 0.2)",
+              "rgba(255, 206, 86, 0.2)",
+              "rgba(75, 192, 192, 0.2)",
+              "rgba(153, 102, 255, 0.2)",
+              "rgba(255, 159, 64, 0.2)"
+            ],
+            borderColor: [
+              "rgba(255, 99, 132, 1)",
+              "rgba(54, 162, 235, 1)",
+              "rgba(255, 206, 86, 1)",
+              "rgba(75, 192, 192, 1)",
+              "rgba(153, 102, 255, 1)",
+              "rgba(255, 159, 64, 1)"
+            ],
+            borderWidth: 1
+          }
+        ]
+      }
+    });
+
+    var clickCount = 0;
+
+    // Event click, point, buffer, intersect
+    map_init.on("click", function(e) {
+      // sidebar.setContent('Null Island').show();
+      // console.log(e);
+      var marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map_init);
+
+      var markerPoint = turf.point([e.latlng.lng, e.latlng.lat]);
+
+      var buffer = turf.buffer(markerPoint, 3, { units: "kilometers" });
+      // console.log(buffer);
+      var bufferGeojson = L.geoJSON(buffer).addTo(map_init);
+
+      // Create an array to store intersected properties
+      var intersectedPropertiesList = [];
+      var intersectedPropertiesListDistance = [];
+
+      // Data Polygon
+      // L.geoJSON(nepalGeoJsonData, {
+      //     onEachFeature: function (nepalFeature, nepalLayer) {
+      //         var nepalPolygon = nepalFeature.geometry;
+
+      //         L.geoJSON(buffer, {
+      //             onEachFeature: function (bufferFeature, bufferLayer) {
+      //                 var bufferPolygon = bufferFeature.geometry
+
+      //                 // var bufferIntersect = turf.intersect(nepalPolygon, bufferPolygon)
+      //                 var bufferIntersect = turf.intersect(nepalPolygon, bufferPolygon)
+
+      //                 L.geoJSON(bufferIntersect, {
+      //                     onEachFeature: function (buffIntersectFeature, buffIntersectLayer) {
+      //                         var intersectProperties = nepalFeature.properties.DISTRICT;
+      //                         console.log(intersectProperties);
+
+      //                         intersectedPropertiesList.push(intersectProperties);
+
+      //                         // document.getElementById("demo").innerHTML = intersectProperties;
+      //                     }
+      //                 }).addTo(map_init);
+
+      //                 // console.log(nepalPolygon, bufferPolygon, bufferIntersect);
+
+      //             }
+      //         })
+      //     }
+      // });
+
+      // Data Point
+      L.geoJSON(apotekData, {
+        onEachFeature: function(apotekFeature, apotekLayer) {
+          var apotekPoint = apotekFeature.geometry.coordinates;
+          // console.log(apotekPoint);
+
+          L.geoJSON(buffer, {
+            onEachFeature: function(bufferFeature, bufferLayer) {
+              var bufferPolygon = bufferFeature.geometry;
+              // console.log(bufferPolygon);
+
+              var bufferIntersect = turf.booleanPointInPolygon(
+                apotekPoint,
+                bufferPolygon
+              );
+              // console.log(bufferIntersect);
+
+              if (bufferIntersect) {
+                var intersectProperties = apotekFeature.properties.NAMOBJ;
+                // console.log(intersectProperties);
+
+                intersectedPropertiesList.push(intersectProperties);
+
+                // Tambahkan hasil intersect ke dalam layer GeoJSON
+                L.geoJSON(apotekFeature.geometry, {
+                  pointToLayer: function(feature, latlng) {
+                    // Use the custom icon for each marker
+                    return L.marker(latlng, { icon: apotekIcon });
+                  }
+                }).addTo(map_init);
+                console.log(apotekFeature.geometry);
+
+                // document.getElementById("demo").innerHTML = intersectProperties;
+
+                // Jarak
+                var options = { units: "kilometers" };
+                var distance = turf.distance(
+                  markerPoint,
+                  apotekFeature.geometry,
+                  options
+                );
+                console.log(distance);
+                intersectedPropertiesListDistance.push(distance);
+              }
+            }
+          });
+        }
+      });
+
+      // Create an HTML string with all intersected properties
+      var htmlResult = intersectedPropertiesList
+        .map(function(properties) {
+          return "<p>" + JSON.stringify(properties).replace(/"/g, "") + "</p>";
+        })
+        .join("");
+
+      // Set the innerHTML of the "demo" element to display the results
+      // document.getElementById("demo").innerHTML = htmlResult;
+
+      // Chart
+      // Update chart labels with intersectedPropertiesList
+      myChart.data.labels = intersectedPropertiesList.map(function(properties) {
+        return JSON.stringify(properties).replace(/"/g, "");
+      });
+
+      // Update chart data (optional)
+      myChart.data.datasets[0].data = intersectedPropertiesListDistance.map(
+        function(properties) {
+          return JSON.stringify(properties).replace(/"/g, "");
+        }
+      );
+
+      //   myChart.data.datasets[0].data = [12, 19, 3, 5, 2, 3]; // Ganti dengan data yang sesuai
+
+      // Update the chart
+      myChart.update();
+
+      clickCount++;
+
+      // Cek apakah sudah dua kali klik
+      // if (clickCount === 2) {
+      //     // Arahkan ke halaman login (ganti URL dengan URL login yang sesuai)
+      //     $('#loginModal').modal('show');
+      // }
+    });
+    // End Event click, point, buffer, intersect
+
+    baseLayer = {
+      OSM: osm
+    };
+
+    groupLayer = {
+      Apotek: apotek,
+      halte: halte,
+      klinik: klinik,
+      pemerintahan: pemerintahan,
+      pusatbelanja: pusatbelanja,
+      puskesmas: puskesmas,
+      rumahsakit: rumahsakit,
+      spbu: spbu,
+      stasiunKA: stasiunKA,
+      supermarket: supermarket,
+      Penduduk: penduduk
+    };
+
+    L.control.layers(baseLayer, groupLayer, { collapse: true }).addTo(map_init);
+  </script>
+</html>
